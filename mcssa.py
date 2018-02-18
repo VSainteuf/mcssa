@@ -143,12 +143,12 @@ class MCSSA(SSA):
             suro = self.ar.generate()
             samples[i, :] = utils.projection(suro, self.E, algo=self.algo)
 
-            sys.stdout.write('\r Suroggate # {}/{}'.format(i + 1, n_suro)
+            sys.stdout.write('\r Suroggate # {}/{}'.format(i + 1, n_suro))
             sys.stdout.flush()
 
         # Compute statistics of the surrogates projections and store them
-        self.stats=utils.stats(samples, level)
-        self.scores=utils.significance(samples, self.values)
+        self.stats = utils.stats(samples, level)
+        self.scores = utils.significance(samples, self.values)
         print('\n MCSSA completed!')
 
     def plot(self, freq_rank=True):
@@ -172,10 +172,10 @@ class AR():
     """
 
     def __init__(self):
-        self.gamma=None  # parameter
-        self.alpha=None  # parameter
-        self.c0=None  # lag-0 covariance
-        self.N=None  # desired length for the realisations
+        self.gamma = None  # parameter
+        self.alpha = None  # parameter
+        self.c0 = None  # lag-0 covariance
+        self.N = None  # desired length for the realisations
 
     def set_parameters(self, mcssa):
         """
@@ -187,32 +187,31 @@ class AR():
         Returns:
 
         """
-        self.gamma, self.alpha, self.c0=ar1.ar1comp(mcssa)
-        self.N=mcssa.data.shape[0]
+        self.gamma, self.alpha, self.c0 = ar1.ar1comp(mcssa)
+        self.N = mcssa.data.shape[0]
 
     def generate(self):
         """
         Returns: a realisation of the AR process, assumes that parameters are set
         """
-        suro=np.zeros(self.N)
+        suro = np.zeros(self.N)
         for i in range(1, self.N):
-            suro[i]=self.gamma * suro[i - 1] + \
+            suro[i] = self.gamma * suro[i - 1] + \
                 self.alpha * np.random.normal()
         return suro
 
 
 if __name__ == '__main__':
     # generate a test series:
-    T=8
-    series=[np.sin(2 * np.pi / T * i) + np.random.rand() for i in range(100)]
+    T = 8
+    series = [np.sin(2 * np.pi / T * i) + np.random.rand() for i in range(100)]
 
-    #SSA analysis
-    ssa=SSA(series)
+    # SSA analysis
+    ssa = SSA(series)
     ssa.run_ssa(20)
     ssa.plot()
 
-    #MCSSA analysis
-    mcssa=MCSSA(series)
+    # MCSSA analysis
+    mcssa = MCSSA(series)
     mcssa.run_mcssa(20, n_suro=1000, filtered_components=[0, 1, 2])
     mcssa.plot()
-
