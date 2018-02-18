@@ -1,6 +1,6 @@
 # mcssa
 
-Compute univariate Monte Carlo Singular Spectrum Analysis on python3
+Python module to compute univariate Monte Carlo Singular Spectrum Analysis on python3
 
 Methodology based on 
 
@@ -10,8 +10,6 @@ Journal of Climate 9, no. 12 (1996): 3373-404.
 http://www.jstor.org/stable/26201460.
 
 ## Usage
-
-No command line usage available yet
 
 Import `mcssa.py`in script or python console
 
