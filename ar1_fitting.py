@@ -12,23 +12,95 @@ http://www.jstor.org/stable/26201460.
 
 @author: Vivien Sainte Fare Garnot
 """
-
-import pandas as pd
 import numpy as np
 import scipy as sp
-import math
-import copy
 
-
-def ar1fit(x):
-    xc=copy.copy(x)
-    xc=xc-xc.mean()
-    c0=c0hat(xc)
-    c1=c1hat(xc)
-    if c0>c1:
-        g=gammat(xc)
-        return g , sigmat(xc,g) , c0/(1-musquare(g,x.shape[0]))
-    else:
+def ar1comp(mcssa):
+    Cd= mcssa.covmat
+    Ed= mcssa.E
+    M=mcssa.M
+    N=mcssa.data.shape[0]
+        
+    # Compute the noise projection matrix
+    Q = proj_mat(Ed, mcssa.filtered_components)
+    
+    # Solve equation for gamma 
+    gam = solver(mcssa,Q)
+    
+    if gam>1:
+        gam=0.99
         print('Non stationary value, setting gamma to 0.99')
-        return 0.99 , sigmat(xc,0.99), c0/(1-musquare(g,x.shape[0]))
+    
+    if gam<0:
+        gam=0.01
+        print('Negative value, setting gamma to 0.01')
 
+    # Compute the other parameters
+    c0 = trace0(Q * Cd *Q) / trace0(Q * Wp(gam,M,N) * Q)
+    alpha = np.sqrt(c0 * (1 - gam**2))
+
+    return gam , alpha, c0
+
+
+def proj_mat(Ed,filtered_components):
+    M=Ed.shape[0]
+    
+    d=[1 for i in range(M)]
+    if len(filtered_components)==0:
+        Q=np.diag(d)
+    else:
+        for i in range(len(filtered_components)):
+            d[int(filtered_components[i])]=0
+        K=np.diag(d)
+        Q=Ed * K * Ed.transpose()
+    return Q
+
+
+def solver(mcssa,Q):
+    M=mcssa.M
+    N=mcssa.data.shape[0]
+    Cd = mcssa.covmat
+    
+    #Define the function to optimise and optimise
+    q = trace1(Q * Cd * Q) / trace0(Q * Cd * Q)
+    
+    def fopt(gamma):
+        return trace1(Q * Wp(gamma,M,N) * Q) / trace0(Q * Wp(gamma,M,N) * Q) - q
+    
+    try :
+        gam = sp.optimize.newton(fopt,q,tol=10e-5)
+    except RuntimeError :
+        gam=0.99
+        print('Algorithm failed to converge, setting gamma to 0.99')
+    
+    return gam
+     
+def Wp(g,M,N):
+    c=[g**i - musquare(g,N) for i in range(M)]
+    w=sp.linalg.toeplitz(c)
+    w=np.matrix(w)
+    return w
+   
+
+def musquare(gamma,N):
+    res=float()
+    res=-1/N + 2/N**2 *((N-gamma**N)/(1-gamma)-(gamma*(1-gamma**(N-1)))/(1-gamma)**2)
+    return res
+
+
+def trace0(m):
+    res=0
+    for i in range(m.shape[0]):
+            res = res + m[i,i]
+    res=res/m.shape[0]
+    return res
+
+def trace1(m):
+    res=0
+    for i in range(m.shape[0]-1):
+            res = res + m[i,i+1]
+    res=res/(m.shape[0]-1)
+    return res
+
+
+    

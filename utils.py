@@ -6,16 +6,17 @@ Created on Sat Feb 17 12:14:00 2018
 @author: viv
 """
 
-
+import pandas as pd
 import numpy as np
 import scipy as sp
+from scipy.stats import percentileofscore
 
 
 #######################################################################
 #Auxiliary functions for the SSA computations
 #######################################################################
 
-def embedded(x,shape):
+def embedded(x,M):
     """
 
     Args:
@@ -23,14 +24,13 @@ def embedded(x,shape):
         shape: int tuple, shape of the desired embedding
 
     Returns:
-        the embedded matrix
+        the embedded trajectory matrix
     """
-    M=shape[0]
-    N2=shape[1]
+    N2=x.shape[0] - M + 1
     xc=np.copy(x)
-    X=np.zeros(shape)
-    for i in range(M):
-        for j in range(N2):
+    X=np.zeros((N2,M))
+    for i in range(N2):
+        for j in range(M):
             X[i][j]=xc[i+j]
     return np.matrix(X)
 
@@ -106,3 +106,49 @@ def dominant_freqs(E):
     freqs = freq[fft.argmax(axis=0)]
     return freqs
 
+#######################################################################
+#Auxiliary functions for the MCSSA computations
+#######################################################################
+    
+def projection(series,E,algo='BK'):
+    M=E.shape[0]
+    N2=series.shape[0]-M+1
+    Et=E.transpose()
+    
+    #Compute the series covariance matrix estimate
+    if algo == 'BK':
+        cseries = series - np.mean(series)
+        Xr = embedded(cseries,M)
+        Cr = covmat_bk(Xr,N2)
+    elif algo == 'VG':
+        Cr = covmat_vg(series,M)
+    else:
+        raise ValueError('Incorrect algorithm name')
+    
+    #Project on matrix E
+    L = Et * Cr * E
+    
+    #Return diagonal elements of the projection
+    return np.diagonal(L)
+
+
+def stats(samples,level):
+    M=samples.shape[1]
+    
+    descr=pd.DataFrame(index=['mean','2.5th perc.','97.5th perc.','rel_error inf','rel_error sup'],columns=['/EOF#'+str(i) for i in range(M)])
+
+    descr.iloc[0,:]=np.mean(samples,axis=0)
+    descr.iloc[1,:]=np.percentile(samples,level/2,axis=0)
+    descr.iloc[2,:]=np.percentile(samples,100-level/2,axis=0)
+    
+    descr.iloc[3,:]=np.abs(descr.iloc[0,:] - descr.iloc[1,:])
+    descr.iloc[4,:]=np.abs(descr.iloc[0,:]-descr.iloc[2,:])
+
+    return descr
+
+        
+def significance(samples,values):
+    scores=[]        
+    for i in range(samples.shape[1]):
+        scores+= [percentileofscore(samples[:,i],values[i],kind='weak')]
+    return scores
