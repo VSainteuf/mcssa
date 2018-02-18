@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Feb 17 12:15:01 2018
-AR(1) fitting algorithms, standard and composite versions
-For details on the maths and notations refer to :
+AR(1) fitting algorithms (composite version)
+For more details on the mathematical considerations, refer to:
 
 Allen, Myles R., and Leonard A. Smith. "Monte Carlo SSA: Detecting Irregular
 Oscillations in the Presence of Colored Noise."
@@ -18,6 +18,15 @@ from scipy.linalg import toeplitz
 
 
 def ar1comp(mcssa):
+    """
+    Determines the AR parameter for a given dataset, following Allen&Smith method
+    Args:
+        mcssa: MCSSA object for which the AR parameters need to be determined
+
+    Returns:
+        gamma,alpha,c0 : AR parameters
+
+    """
     Cd = mcssa.covmat
     Ed = mcssa.E
     M = mcssa.M
@@ -45,20 +54,40 @@ def ar1comp(mcssa):
 
 
 def proj_mat(Ed, filtered_components):
-    M = Ed.shape[0]
+    """
+    Computes the projection matrix for a given set of filtered components
+    Args:
+        Ed: EOF matrix
+        filtered_components: list
 
+    Returns:
+        Q: numpy matrix
+    """
+    M = Ed.shape[0]
     d = [1 for i in range(M)]
+
     if len(filtered_components) == 0:
         Q = np.diag(d)
+
     else:
         for i in range(len(filtered_components)):
             d[int(filtered_components[i])] = 0
         K = np.diag(d)
         Q = Ed * K * Ed.transpose()
+
     return Q
 
 
 def solver(mcssa, Q):
+    """
+    Solves the equation for the determination of gamma (see reference)
+    Args:
+        mcssa: MCSSA object
+        Q: numpy matrix, projection matrix
+
+    Returns:
+
+    """
     M = mcssa.M
     N = mcssa.data.shape[0]
     Cd = mcssa.covmat
@@ -94,16 +123,22 @@ def musquare(gamma, N):
 
 
 def trace0(m):
-    res = 0
-    for i in range(m.shape[0]):
-        res = res + m[i, i]
-    res = res / m.shape[0]
-    return res
+    """
+    Averaged trace of the matrix
+    Args:
+        m: numpy matrix
+
+    Returns:
+
+    """
+    return 1 / m.shape[0] * float(m.trace())
 
 
 def trace1(m):
-    res = 0
-    for i in range(m.shape[0] - 1):
-        res = res + m[i, i + 1]
-    res = res / (m.shape[0] - 1)
-    return res
+    """
+    Averaged offset trace of the matrix
+    Args:
+        m: numpy matrix
+
+    """
+    return 1 / (m.shape[0] - 1) * float(m.trace(offset=1))

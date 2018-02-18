@@ -2,8 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Feb 17 12:14:00 2018
+Auxiliary functions for the computation and display of SSA and MC-SSA analyses
 
-@author: viv
+For more details on the mathematical considerations, refer to:
+Allen, Myles R., and Leonard A. Smith. "Monte Carlo SSA: Detecting Irregular
+Oscillations in the Presence of Colored Noise."
+Journal of Climate 9, no. 12 (1996): 3373-404.
+http://www.jstor.org/stable/26201460.
+@author: Vivien Sainte Fare Garnot
 """
 
 import numpy as np
@@ -12,9 +18,10 @@ from scipy.linalg import toeplitz, eig
 import pandas as pd
 import matplotlib.pyplot as plt
 
-#######################################################################
+################################################################################
 # Auxiliary functions for the SSA computations
-#######################################################################
+################################################################################
+
 
 def embedded(x, M):
     """
@@ -92,6 +99,14 @@ def eigen_decomp(matrix):
 
 
 def RC_table(ssa):
+    """
+    Computes the reconstructions of all M components
+    Args:
+        ssa: instance of SSA class
+
+    Returns: Dataframe containing the RCs
+
+    """
     RC = pd.DataFrame(index=ssa.index, columns=[
                       'RC#' + str(i + 1) for i in range(ssa.M)])
 
@@ -129,12 +144,23 @@ def dominant_freqs(E):
     freqs = freq[fft.argmax(axis=0)]
     return freqs
 
-#######################################################################
+################################################################################
 # Auxiliary functions for the MCSSA computations
-#######################################################################
+################################################################################
 
 
 def projection(series, E, algo='BK'):
+    """
+    Computes the covariance matrix of the series and projects it onto E
+    Args:
+        series: 1-d array like, a time series
+        E: array, EOF matrix
+        algo: string, covariance matrix algo ('BK' or 'VG')
+
+
+    Returns:
+        the list of the diagonal elements of the projection
+    """
     M = E.shape[0]
     N2 = series.shape[0] - M + 1
     Et = E.transpose()
@@ -157,15 +183,25 @@ def projection(series, E, algo='BK'):
 
 
 def stats(samples, level):
+    """
+
+    Args:
+        samples: array, pojections of all the surrogate realisations
+        level: float, significance level in percent
+
+    Returns:
+        A dataframe with the descriptive statistics of the surrogate ensemble
+
+    """
     M = samples.shape[1]
 
-    descr = pd.DataFrame(index=['mean', '2.5th perc.', '97.5th perc.', 'rel_error inf',
-                                'rel_error sup'], columns=['/EOF#' + str(i) for i in range(M)])
+    descr = pd.DataFrame(index=['mean', '2.5th perc.', '97.5th perc.',
+                                'rel_error inf', 'rel_error sup'],
+                         columns=['/EOF#' + str(i) for i in range(M)])
 
     descr.iloc[0, :] = np.mean(samples, axis=0)
     descr.iloc[1, :] = np.percentile(samples, level / 2, axis=0)
     descr.iloc[2, :] = np.percentile(samples, 100 - level / 2, axis=0)
-
     descr.iloc[3, :] = np.abs(descr.iloc[0, :] - descr.iloc[1, :])
     descr.iloc[4, :] = np.abs(descr.iloc[0, :] - descr.iloc[2, :])
 
@@ -173,24 +209,42 @@ def stats(samples, level):
 
 
 def significance(samples, values):
+    """
+    Computes the significance of the EOFs
+    Args:
+        samples: array, pojections of all the surrogate realisations
+        values: eigenvalues of the SSA analysis
+
+    Returns: list of M scores
+
+    """
     scores = []
     for i in range(samples.shape[1]):
         scores += [percentileofscore(samples[:, i], values[i], kind='weak')]
     return scores
 
 
-#######################################################################
+################################################################################
 # Dsiplaying and plotting functions
-#######################################################################
+################################################################################
+
 
 def plot(mc_ssa, freq_rank=True):
+    """
+    Plotting method for both SSA and MCSSA objects
+    Args:
+        mc_ssa: SSA or MCSSA object
+        freq_rank: Boolean, if true EOFs are plotted in frequency order
+
+    Returns:
+        matplolib figure
+
+    """
     fig = plt.figure()
     plt.yscale('log')
     plt.ylabel('Variance')
-    plt.title('M=' + str(mc_ssa.M) + '   (cov:' + str(mc_ssa.algo) + ')')
+    plt.title('M: {}; cov: {}'.format(mc_ssa.M, mc_ssa.algo))
 
-    
-    
     if not freq_rank:
         x = [i for i in range(mc_ssa.M)]
         y = mc_ssa.values
@@ -209,15 +263,26 @@ def plot(mc_ssa, freq_rank=True):
         mean_suro = np.array(mc_ssa.stats.iloc[0, :])
         plt.errorbar(x, y=mean_suro, yerr=errors, fmt=None,
                      ecolor='k', elinewidth=.5, capsize=2.5)
-        plt.title('M=' + str(mc_ssa.M) + ' ; g=' + str(mc_ssa.ar.gamma)[0:5] + ' a=' + str(
-            mc_ssa.ar.alpha) + ' ; Ns=' + str(mc_ssa.n_suro) + ' (cov=' + str(mc_ssa.algo) + ')')
+        plt.title('M: {}; g: {0:5}; a: {}; Ns: {}'.format(mc_ssa.M,
+                                                          mc_ssa.ar.gamma,
+                                                          mc_ssa.ar.alpha,
+                                                          mc_ssa.n_suro))
 
     plt.show()
-    
+
     return fig
 
 
 def freq_table(mc_ssa):
+    """
+    Displays the frequencies of each EOF
+    Args:
+        mc_ssa: MCSSA object
+
+    Returns:
+        Dataframe
+
+    """
     tab = pd.DataFrame(index=range(mc_ssa.M), columns=[
                        'EOF', 'f (in cycles per unit)'])
     freq = mc_ssa.freqs[mc_ssa.freq_rank]

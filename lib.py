@@ -3,7 +3,7 @@
 """
 Created on Sat Feb 17 12:08:37 2018
 
-@author: viv
+@author: Vivien Sainte Fare Garnot
 """
 import sys
 import numpy as np
@@ -15,22 +15,27 @@ import ar1_fitting as ar1
 
 class SSA:
     def __init__(self, data):
-        self.data = np.array(data)  # store the data in the object
+        """
+        Generic instance of a SSA analysis
+        Args:
+            data: array like, input time series, must be one dimensional
+        """
+        self.data = np.array(data)
         try:
             self.index = list(data.index)
         except TypeError:
             self.index = [i for i in range(self.data.shape[0])]
-        self.M = None  # Window length
-        self.N2 = None  # Reduced length
-        self.X = None  # Trajectory matrix
-        self.covmat = None  # Covariance matrix
-        self.E = None  # EOFs, matrix
-        self.RC = None  # Reconstructed components
-        self.values = None  # eigenvalues
-        self.algo = None  # algorithm used for covariance matrix
-        self.freqs = None  # frequencies of the EOFs
-        self.freq_rank = None
-        self.ismc = False
+        self.M = None           # Window length
+        self.N2 = None          # Reduced length
+        self.X = None           # Trajectory matrix
+        self.covmat = None      # Covariance matrix
+        self.E = None           # EOFs matrix
+        self.values = None      # eigenvalues
+        self.RC = None          # Reconstructed components
+        self.algo = None        # Algorithm used for the covariance matrix
+        self.freqs = None       # Frequencies of the EOFs
+        self.freq_rank = None   # Frequency ranked index
+        self.ismc = False       # Boolean, Monte Carlo test
 
     def _embed(self, M):
         self.M = M
@@ -53,6 +58,13 @@ class SSA:
         self.algo = algo
 
     def run_ssa(self, M, algo='BK'):
+        """Completes the Analysis on a SSA object
+
+        Args:
+            M: int, window length
+            algo: string, covariance matrix algo ('BK' or 'VG')
+
+        """
         self._embed(M)
         self._compute_cov(algo=algo)
 
@@ -62,15 +74,22 @@ class SSA:
         self.RC = utils.RC_table(self)
 
     def plot(self, freq_rank=True):
-        return utils.plot(self,freq_rank)
+        return utils.plot(self, freq_rank)
 
     def show_f(self):
         return utils.freq_table(self)
 
     def reconstruct(self, components):
+        """
+        Computes the RC corresponding to a list of components
+        Args:
+            components: list of int, list of components
+
+        Returns:
+
+        """
         if len(components) == 2:
-            name = 'RC ' + str(components[0] + 1) + \
-                '-' + str(components[1] + 1)
+            name = 'RC {}-{}'.format(components[0] + 1, components[1] + 1)
         else:
             name = 'Reconstruction'
         res = pd.DataFrame(index=self.index, columns=[name])
@@ -81,16 +100,33 @@ class SSA:
 class MCSSA(SSA):
 
     def __init__(self, data):
-        super(MCSSA, self).__init__(data)
-        # store the data in the object
-        self.data = np.array(data) - np.mean(data)
-        self.ar = AR()
-        self.filtered_components = None
-        self.stats = None
-        self.scores = None
-        self.ismc = True
+        """Generic instance of an MC-SSA analysis
 
-    def run_mcssa(self, M, algo='BK', n_suro=100, filtered_components=[], level=5):
+        Args:
+            data: array like, input time series, must be one dimensional
+        """
+        super(MCSSA, self).__init__(data)
+        self.data = np.array(data) - np.mean(data)
+        self.ar = AR()  # AR instance attached to the MCSSA test
+        self.filtered_components = None  # list of filtered components
+        self.stats = None  # Descriptive statistics of the surrogate ensemble
+        self.scores = None  # Significance scores of the EOFs
+        self.ismc = True  # Boolean, Monte Carlo test
+
+    def run_mcssa(self, M,
+                  algo='BK', n_suro=100, filtered_components=[], level=5):
+        """Completes the MC-SSA algorithm on a MCSSA object instance
+
+        Args:
+            M: int, window lenght
+            algo: string, covariance matrix algo ('BK' or 'VG')
+            n_suro: int, number of surrogates
+            filtered_components: list of ints, list of the filtered EOFs
+            level: float, significance level in percent
+
+        Returns:
+
+        """
         # Store parameters
         self.filtered_components = filtered_components
         self.n_suro = n_suro
@@ -107,51 +143,76 @@ class MCSSA(SSA):
             suro = self.ar.generate()
             samples[i, :] = utils.projection(suro, self.E, algo=self.algo)
 
-            sys.stdout.write('\r Suroggate #' + str(i + 1) + '/' + str(n_suro))
+            sys.stdout.write('\r Suroggate # {}/{}'.format(i + 1, n_suro)
             sys.stdout.flush()
 
         # Compute statistics of the surrogates projections and store them
-        self.stats = utils.stats(samples, level)
-        self.scores = utils.significance(samples, self.values)
+        self.stats=utils.stats(samples, level)
+        self.scores=utils.significance(samples, self.values)
         print('\n MCSSA completed!')
 
     def plot(self, freq_rank=True):
-        return utils.plot(self,freq_rank)
+        """Plots the MCSSA spectrum, assumes run_mcssa has been completed
+
+        Args:
+            freq_rank: boolean, if True eigenvalues are plotted
+            in increasing frequency
+
+        Returns:
+            matplotlib figure
+
+        """
+        return utils.plot(self, freq_rank)
 
 
 class AR():
+    """
+    Class representing a generic AR(1) process defined by the formula:
+    z(t+1) = gamma * z(t) + alpha * e(t) with e(t) a random normal process
+    """
+
     def __init__(self):
-        self.gamma = None
-        self.alpha = None
-        self.c0 = None
-        self.N = None
+        self.gamma=None  # parameter
+        self.alpha=None  # parameter
+        self.c0=None  # lag-0 covariance
+        self.N=None  # desired length for the realisations
 
     def set_parameters(self, mcssa):
-        self.gamma, self.alpha, self.c0 = ar1.ar1comp(mcssa)
-        self.N = mcssa.data.shape[0]
+        """
+        Determines the AR parameters that will constitute
+        the strongest null hypothesis
+        Args:
+            mcssa: MCSSA instance
+
+        Returns:
+
+        """
+        self.gamma, self.alpha, self.c0=ar1.ar1comp(mcssa)
+        self.N=mcssa.data.shape[0]
 
     def generate(self):
-        suro = np.zeros(self.N)
+        """
+        Returns: a realisation of the AR process, assumes that parameters are set
+        """
+        suro=np.zeros(self.N)
         for i in range(1, self.N):
-            suro[i] = self.gamma * suro[i - 1] + \
+            suro[i]=self.gamma * suro[i - 1] + \
                 self.alpha * np.random.normal()
         return suro
 
 
 if __name__ == '__main__':
     # generate a test series:
-    T = 8
-    series = [np.sin(2 * np.pi / T * i) + np.random.rand() for i in range(100)]
-    dfseries = pd.DataFrame(series)
-    pdseries = pd.Series(series)
-    ssa = SSA(series)
-    ssa.run_ssa(20)
-    ssa.plot(True)
+    T=8
+    series=[np.sin(2 * np.pi / T * i) + np.random.rand() for i in range(100)]
 
-    mcssa = MCSSA(series)
-    mcssa.run_mcssa(20, n_suro=100, filtered_components=[0, 1, 2])
+    #SSA analysis
+    ssa=SSA(series)
+    ssa.run_ssa(20)
+    ssa.plot()
+
+    #MCSSA analysis
+    mcssa=MCSSA(series)
+    mcssa.run_mcssa(20, n_suro=1000, filtered_components=[0, 1, 2])
     mcssa.plot()
 
-    mcssa2 = MCSSA(pdseries)
-    mcssa2.run_mcssa(20, n_suro=100, filtered_components=[0, 1, 2])
-    mcssa2.plot()
