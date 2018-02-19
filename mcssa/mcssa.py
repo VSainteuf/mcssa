@@ -9,8 +9,8 @@ import sys
 import numpy as np
 import pandas as pd
 
-import utils
-import ar1_fitting as ar1
+import mcssa.utils as utils
+import mcssa.ar1_fitting as ar1
 
 
 class SSA:
