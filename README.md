@@ -11,9 +11,12 @@ http://www.jstor.org/stable/26201460.
 
 ## Usage
 
-Import `mcssa.py`in script or python console
+Clone repo on your machine and `cd` into the parent folder.
+You can then locally install the package with:
 
-Examples of how to use it are given in the __main__
+`pip install -e mcssa`
+
+Examples of how to use it are given in the __main__ of `mcssa.py`
 
 ## Requirements
 
