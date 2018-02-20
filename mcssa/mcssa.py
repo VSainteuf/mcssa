@@ -92,8 +92,10 @@ class SSA:
             name = 'RC {}-{}'.format(components[0] + 1, components[1] + 1)
         else:
             name = 'Reconstruction'
-        res = pd.DataFrame(index=self.index, columns=[name])
-        res[name] = sum(self.RC.iloc[:, i] for i in range(len(components)))
+            
+        res = self.RC.iloc[:,components].sum(axis=1)
+        res.name = name
+        res.index = self.index
         return res
 
 
