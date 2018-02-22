@@ -34,12 +34,13 @@ class SSA:
         ismc (bool): Monte Carlo test
 
     """
+
     def __init__(self, data):
 
         self.data = np.array(data)
         try:
             self.index = list(data.index)
-        except TypeError:
+        except:
             self.index = [i for i in range(self.data.shape[0])]
         self.M = None
         self.N2 = None
@@ -123,7 +124,7 @@ class SSA:
         else:
             name = 'Reconstruction'
 
-        components = [i-1 for i in components]
+        components = [i - 1 for i in components]
         res = self.RC.iloc[:, components].sum(axis=1)
         res.name = name
         res.index = self.index
@@ -151,6 +152,7 @@ class MCSSA(SSA):
         scores (list): Significance scores of the EOFs
 
     """
+
     def __init__(self, data):
         super(MCSSA, self).__init__(data)
         self.data = np.array(data) - np.mean(data)
@@ -174,7 +176,7 @@ class MCSSA(SSA):
         """
         # Store parameters,
         # EOFs are labelled from 0 to M-1 in the computations (not 1 to M)
-        self.filtered_components = [i-1 for i in filtered_components]
+        self.filtered_components = [i - 1 for i in filtered_components]
         self.n_suro = n_suro
 
         # Compute SSA and determine AR1 parameters
@@ -257,8 +259,8 @@ if __name__ == '__main__':
     ssa.run_ssa(20)
     ssa.plot()
 
-    #Reconstruction
-    RC23 = ssa.reconstruct([2,3])
+    # Reconstruction
+    RC23 = ssa.reconstruct([2, 3])
     RC23.plot()
 
     # MCSSA analysis
@@ -266,5 +268,3 @@ if __name__ == '__main__':
     mcssa.run_mcssa(20, n_suro=1000, filtered_components=[0, 1, 2])
     mcssa.plot()
     mcssa.show_f()
-
-
