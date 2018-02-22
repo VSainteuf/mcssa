@@ -24,11 +24,11 @@ import matplotlib.pyplot as plt
 
 
 def embedded(x, M):
-    """
+    """Computes the M embedding of a time series
 
     Args:
-        x: numpy array, data time series
-        shape: int tuple, shape of the desired embedding
+        x (numpy array): data time series
+        M (int): dimension of the desired embedding (window length)
 
     Returns:
         the embedded trajectory matrix
@@ -43,28 +43,28 @@ def embedded(x, M):
 
 
 def covmat_bk(X, N2):
-    """
+    """Covariance matrix estimator, following Broomhead&King method
 
     Args:
-        X: numpy matrix, trajectory matrix
-        N2: int, reduced length
+        X (numpy matrix): trajectory matrix
+        N2 (int): reduced length
 
     Returns:
-        Covariance matrix estimator, following Broomhead&King method
+        numpy matrix
 
     """
     return 1 / N2 * X.transpose() * X
 
 
 def covmat_vg(series, M):
-    """
+    """Covariance matrix estimator, following Vautard & Ghil method
 
     Args:
-        series: numpy array, data time series
-        M: int, window length
+        series (numpy array): data time series
+        M (int): window length
 
     Returns:
-        Covariance matrix estimator, following Vautard&Ghil method
+        numpy matrix
     """
     N = series.shape[0]
     diag = np.zeros(M)
@@ -79,14 +79,14 @@ def covmat_vg(series, M):
 
 
 def eigen_decomp(matrix):
-    """
+    """Performs the eigendecomposition of the input matrix.
 
     Args:
-        matrix: numpy matrix
+        matrix (numpy matrix): matrix to decompose
 
     Returns:
-        values : list of eigenvalues in descending order
-        E : eigenvectors matrix
+        values (list): eigenvalues arranged in descending order
+        E (numpy matrix): eigenvectors matrix
 
     """
 
@@ -99,12 +99,15 @@ def eigen_decomp(matrix):
 
 
 def RC_table(ssa):
-    """
-    Computes the reconstructions of all M components
-    Args:
-        ssa: instance of SSA class
+    """Computes the reconstructions of all M components and stores
+    them in the M columns of a DataFrame.
 
-    Returns: Dataframe containing the RCs
+    Args:
+        ssa (mcssa.SSA): instance of SSA for which the reconstruction
+        is computed
+
+    Returns:
+        pandas.Dataframe
 
     """
     RC = pd.DataFrame(index=ssa.index, columns=[
@@ -126,13 +129,14 @@ def RC_table(ssa):
 
 
 def dominant_freqs(E):
-    """
-    dominant frequencies of the column vectors of the input matrix
+    """Computes the dominant frequencies of the column vectors
+    of the input matrix using FFT.
+
     Args:
-        E: matrix of eigenvectors (as columns)
+        E (numpy matrix): Matrix of eigenvectors (as columns)
 
     Returns:
-        list of dominant frequencies computed with fft
+        list of floats
     """
 
     nfft = 2 ** 11
@@ -150,16 +154,18 @@ def dominant_freqs(E):
 
 
 def projection(series, E, algo='BK'):
-    """
-    Computes the covariance matrix of the series and projects it onto E
+    """Computes the covariance matrix of the series and projects it onto E.
+    Returns the diagonal elements of the projection
+
     Args:
-        series: 1-d array like, a time series
-        E: array, EOF matrix
-        algo: string, covariance matrix algo ('BK' or 'VG')
+        series (array): input time series, must be 1-dimensional
+        E (numpy matrix): EOF matrix
+        algo (str): covariance matrix algorithm ('BK' or 'VG')
 
 
     Returns:
-        the list of the diagonal elements of the projection
+        list of floats
+
     """
     M = E.shape[0]
     N2 = series.shape[0] - M + 1
@@ -183,14 +189,14 @@ def projection(series, E, algo='BK'):
 
 
 def stats(samples, level):
-    """
+    """Computes the descriptive statistics of the surrogate ensemble
 
     Args:
-        samples: array, pojections of all the surrogate realisations
-        level: float, significance level in percent
+        samples (numpy array): pojections of all the surrogate realisations
+        level (float): significance level in percent
 
     Returns:
-        A dataframe with the descriptive statistics of the surrogate ensemble
+        pandas.DataFrame
 
     """
     M = samples.shape[1]
@@ -209,13 +215,14 @@ def stats(samples, level):
 
 
 def significance(samples, values):
-    """
-    Computes the significance of the EOFs
-    Args:
-        samples: array, pojections of all the surrogate realisations
-        values: eigenvalues of the SSA analysis
+    """Computes the significance of the EOFs
 
-    Returns: list of M scores
+    Args:
+        samples (numpy array): pojections of all the surrogate realisations
+        values (list): eigenvalues of the SSA analysis
+
+    Returns:
+        list of the significance of each eigenvalue as percentages
 
     """
     scores = []
@@ -230,16 +237,18 @@ def significance(samples, values):
 
 
 def plot(mc_ssa, freq_rank=True):
-    """
-    Plotting method for both SSA and MCSSA objects
+    """Plotting method for both SSA and MCSSA objects
+
     Args:
         mc_ssa: SSA or MCSSA object
-        freq_rank: Boolean, if true EOFs are plotted in frequency order
+        freq_rank (boolean): if true EOFs are plotted against their
+        dominant frequency
 
     Returns:
         matplolib figure
 
     """
+
     fig = plt.figure()
     plt.yscale('log')
     plt.ylabel('Variance')
@@ -274,13 +283,12 @@ def plot(mc_ssa, freq_rank=True):
 
 
 def freq_table(mc_ssa):
-    """
-    Displays the frequencies of each EOF
+    """Builds a table with the frequency of each EOF
     Args:
         mc_ssa: MCSSA object
 
     Returns:
-        Dataframe
+        pandas.Dataframe
 
     """
     tab = pd.DataFrame(index=range(mc_ssa.M), columns=[

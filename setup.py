@@ -6,4 +6,4 @@ setup(name='mcssa',
       author='Vivien Sainte Fare Garnot',
       packages=find_packages(exclude=['contrib', 'docs', 'example']),
       include_package_data=True,
-      python_requires='>=3.5,<3.6')
+      python_requires='>=3.4')

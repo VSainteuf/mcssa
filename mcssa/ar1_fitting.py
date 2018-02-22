@@ -18,8 +18,8 @@ from scipy.linalg import toeplitz
 
 
 def ar1comp(mcssa):
-    """
-    Determines the AR parameter for a given dataset, following Allen&Smith method
+    """Determines the AR parameter for a given dataset,
+        following Allen & Smith method
     Args:
         mcssa: MCSSA object for which the AR parameters need to be determined
 
@@ -54,11 +54,10 @@ def ar1comp(mcssa):
 
 
 def proj_mat(Ed, filtered_components):
-    """
-    Computes the projection matrix for a given set of filtered components
+    """Computes the projection matrix for a given set of filtered components
     Args:
-        Ed: EOF matrix
-        filtered_components: list
+        Ed (numpy matrix): EOF matrix
+        filtered_components (list): the ranks of the EOFs to filter
 
     Returns:
         Q: numpy matrix
@@ -79,13 +78,13 @@ def proj_mat(Ed, filtered_components):
 
 
 def solver(mcssa, Q):
-    """
-    Solves the equation for the determination of gamma (see reference)
+    """Solves the equation for the determination of gamma (see reference)
     Args:
         mcssa: MCSSA object
-        Q: numpy matrix, projection matrix
+        Q (numpy matrix): projection matrix
 
     Returns:
+        gam (float): the solution (only to this specific problem)
 
     """
     M = mcssa.M
@@ -115,6 +114,14 @@ def Wp(g, M, N):
 
 
 def musquare(gamma, N):
+    """Bias correction function
+    Args:
+        gamma (float): the AR parameter
+        N (int): length of the time series
+
+    Returns:
+        float value
+    """
     res = float()
     res = -1 / N + 2 / N**2 * \
         ((N - gamma**N) / (1 - gamma) -
@@ -123,22 +130,21 @@ def musquare(gamma, N):
 
 
 def trace0(m):
-    """
-    Averaged trace of the matrix
+    """Averaged trace of the matrix
     Args:
-        m: numpy matrix
+        m (numpy matrix): input matrix
 
     Returns:
-
+        float value
     """
     return 1 / m.shape[0] * float(m.trace())
 
 
 def trace1(m):
-    """
-    Averaged offset trace of the matrix
+    """Averaged offset trace of the matrix
     Args:
-        m: numpy matrix
-
+        m (numpy matrix): input matrix
+    Returns:
+        float value
     """
     return 1 / (m.shape[0] - 1) * float(m.trace(offset=1))
