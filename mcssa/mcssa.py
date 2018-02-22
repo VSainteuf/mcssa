@@ -260,11 +260,11 @@ if __name__ == '__main__':
     ssa.plot()
 
     # Reconstruction
-    RC23 = ssa.reconstruct([2, 3])
+    RC23 = ssa.reconstruct([1, 2])
     RC23.plot()
 
     # MCSSA analysis
     mcssa = MCSSA(series)
-    mcssa.run_mcssa(20, n_suro=1000, filtered_components=[0, 1, 2])
+    mcssa.run_mcssa(20, n_suro=1000, filtered_components=[1, 2])
     mcssa.plot()
     mcssa.show_f()
