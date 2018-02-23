@@ -218,10 +218,8 @@ def significance(samples, values):
     Returns: list of M scores
 
     """
-    scores = []
-    for i in range(samples.shape[1]):
-        scores += [percentileofscore(samples[:, i], values[i], kind='weak')]
-    return scores
+    return [percentileofscore(samples[:, i], values[i], kind='weak')
+            for i in range(samples.shape[1])]
 
 
 ###############################################################################
