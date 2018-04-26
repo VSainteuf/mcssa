@@ -18,9 +18,9 @@ from scipy.linalg import toeplitz, eig
 import pandas as pd
 import matplotlib.pyplot as plt
 
-################################################################################
+###############################################################################
 # Auxiliary functions for the SSA computations
-################################################################################
+###############################################################################
 
 
 def embedded(x, M):
@@ -148,9 +148,9 @@ def dominant_freqs(E):
     freqs = freq[fft.argmax(axis=0)]
     return freqs
 
-################################################################################
+###############################################################################
 # Auxiliary functions for the MCSSA computations
-################################################################################
+###############################################################################
 
 
 def projection(series, E, algo='BK'):
@@ -225,15 +225,13 @@ def significance(samples, values):
         list of the significance of each eigenvalue as percentages
 
     """
-    scores = []
-    for i in range(samples.shape[1]):
-        scores += [percentileofscore(samples[:, i], values[i], kind='weak')]
-    return scores
+    return [percentileofscore(samples[:, i], values[i], kind='weak')
+            for i in range(samples.shape[1])]
 
 
-################################################################################
+###############################################################################
 # Dsiplaying and plotting functions
-################################################################################
+###############################################################################
 
 
 def plot(mc_ssa, freq_rank=True):
@@ -257,6 +255,7 @@ def plot(mc_ssa, freq_rank=True):
     if not freq_rank:
         x = [i for i in range(mc_ssa.M)]
         y = mc_ssa.values
+
         plt.xlabel('Eigenvalue Rank')
         plt.plot(y, marker='s', linewidth=0, color='r')
 
@@ -291,8 +290,8 @@ def freq_table(mc_ssa):
         pandas.Dataframe
 
     """
-    tab = pd.DataFrame(index=range(mc_ssa.M), columns=[
-                       'EOF', 'f (in cycles per unit)'])
+    tab = pd.DataFrame(index=range(mc_ssa.M),
+                       columns=['EOF', 'f (in cycles per unit)'])
     freq = mc_ssa.freqs[mc_ssa.freq_rank]
     for i in range(mc_ssa.M):
         tab.iloc[i, :] = ['EOF ' + str(mc_ssa.freq_rank[i] + 1), freq[i]]
