@@ -269,7 +269,7 @@ def plot(mc_ssa, freq_rank=True):
     if mc_ssa.ismc:
         errors = np.array(mc_ssa.stats.iloc[3:5, :])
         mean_suro = np.array(mc_ssa.stats.iloc[0, :])
-        plt.errorbar(x, y=mean_suro, yerr=errors, fmt=None,
+        plt.errorbar(x, y=mean_suro, yerr=errors,fmt='none',
                      ecolor='k', elinewidth=.5, capsize=2.5)
         plt.title('M: {}; g: {}; a: {}; Ns: {}'.format(mc_ssa.M,
                                                        mc_ssa.ar.gamma,
