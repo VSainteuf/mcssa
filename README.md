@@ -31,7 +31,7 @@ random noise
 ```Python3
 import numpy as np
 import matplotlib.pyplot as plt
-from mcssa import mcssa
+from mcssa.mcssa import SSA,MCSSA
 
 T = 8
 series = [np.sin(2 * np.pi / T * i) + np.random.rand() for i in range(100)]
