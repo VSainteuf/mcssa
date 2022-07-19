@@ -21,8 +21,6 @@ import matplotlib.pyplot as plt
 ###############################################################################
 # Auxiliary functions for the SSA computations
 ###############################################################################
-
-
 def embedded(x, M):
     """Computes the M embedding of a time series
 
@@ -34,11 +32,9 @@ def embedded(x, M):
         the embedded trajectory matrix
     """
     N2 = x.shape[0] - M + 1
-    xc = np.copy(x)
     X = np.zeros((N2, M))
     for i in range(N2):
-        for j in range(M):
-            X[i][j] = xc[i + j]
+        X[i,:] = x[i:i+M]
     return np.matrix(X)
 
 
@@ -89,7 +85,6 @@ def eigen_decomp(matrix):
         E (numpy matrix): eigenvectors matrix
 
     """
-
     values, E = eig(matrix, right=True)
     idx = values.argsort()[::-1]
     values = values[idx]
@@ -98,7 +93,7 @@ def eigen_decomp(matrix):
     return values, E
 
 
-def RC_table(ssa):
+def RC_table(ssa, components=None):
     """Computes the reconstructions of all M components and stores
     them in the M columns of a DataFrame.
 
@@ -110,23 +105,20 @@ def RC_table(ssa):
         pandas.Dataframe
 
     """
-    RC = pd.DataFrame(index=ssa.index, columns=[
-                      'RC#' + str(i + 1) for i in range(ssa.M)])
-
-    for i in range(ssa.M):
-        d = [0 for k in range(ssa.M)]
-        d[i] = 1
-        I = np.diag(d)
+    components = range(ssa.M) if components is None else components
+    RC = pd.DataFrame(index=ssa.index,
+                      columns=[f'RC#{i}' for i in components])
+  
+    for i in components:
         # Compute the filtered trajectory matrix
-        X2 = ssa.X * ssa.E * I * ssa.E.transpose()
+        X2 = ssa.X * ssa.E[:,i] * ssa.E[:,i].transpose()
         # switch antidiagonals to diagonals
         X2 = np.flipud(X2)
 
         for k in range(ssa.data.shape[0]):
-            RC.iloc[k, i] = np.diagonal(X2, offset=-(ssa.N2 - 1 - k)).mean()
+            RC[f'RC#{i}'].iat[k] = np.diagonal(X2, offset=-(ssa.N2 - 1 - k)).mean()
 
     return RC
-
 
 def dominant_freqs(E):
     """Computes the dominant frequencies of the column vectors
@@ -152,7 +144,6 @@ def dominant_freqs(E):
 # Auxiliary functions for the MCSSA computations
 ###############################################################################
 
-
 def projection(series, E, algo='BK'):
     """Computes the covariance matrix of the series and projects it onto E.
     Returns the diagonal elements of the projection
@@ -169,7 +160,6 @@ def projection(series, E, algo='BK'):
     """
     M = E.shape[0]
     N2 = series.shape[0] - M + 1
-    Et = E.transpose()
 
     # Compute the series covariance matrix estimate
     if algo == 'BK':
@@ -181,12 +171,10 @@ def projection(series, E, algo='BK'):
     else:
         raise ValueError('Incorrect algorithm name')
 
-    # Project on matrix E
-    L = Et * Cr * E
-
-    # Return diagonal elements of the projection
-    return np.diagonal(L)
-
+    # Somewhat faster, calculates the diagonal only without all the excess entries
+    L = np.einsum('ki, kj, ji -> i', E, Cr, E)
+    return L
+    
 
 def stats(samples, level):
     """Computes the descriptive statistics of the surrogate ensemble
@@ -200,8 +188,9 @@ def stats(samples, level):
 
     """
     M = samples.shape[1]
-
-    descr = pd.DataFrame(index=['mean', '2.5th perc.', '97.5th perc.',
+    
+    perc = level/2
+    descr = pd.DataFrame(index=['mean', f'{perc:2.2f}th perc.', f'{100-perc:2.2f}th perc.',
                                 'rel_error inf', 'rel_error sup'],
                          columns=['/EOF#' + str(i) for i in range(M)])
 
@@ -253,7 +242,7 @@ def plot(mc_ssa, freq_rank=True):
     plt.title('M: {}; cov: {}'.format(mc_ssa.M, mc_ssa.algo))
 
     if not freq_rank:
-        x = [i for i in range(mc_ssa.M)]
+        x = np.arange(mc_ssa.M)
         y = mc_ssa.values
 
         plt.xlabel('Eigenvalue Rank')
@@ -298,6 +287,6 @@ def freq_table(mc_ssa):
                        columns=['EOF', 'f (in cycles per unit)'])
     freq = mc_ssa.freqs[mc_ssa.freq_rank]
     for i in range(mc_ssa.M):
-        tab.iloc[i, :] = ['EOF ' + str(mc_ssa.freq_rank[i] + 1), freq[i]]
+        tab.iloc[i, :] = ['EOF ' + str(mc_ssa.freq_rank[i]), freq[i]]
     print(tab)
     return tab
