@@ -63,16 +63,12 @@ def proj_mat(Ed, filtered_components):
         Q: numpy matrix
     """
     M = Ed.shape[0]
-    d = [1 for i in range(M)]
-
     if len(filtered_components) == 0:
-        Q = np.diag(d)
-
-    else:
-        for i in range(len(filtered_components)):
-            d[int(filtered_components[i])] = 0
-        K = np.diag(d)
-        Q = Ed * K * Ed.transpose()
+        return 1
+    d = np.ones(M)
+    d[filtered_components] = 0
+    K = np.diag(d)
+    Q = Ed * K * Ed.transpose()
 
     return Q
 
@@ -107,7 +103,7 @@ def solver(mcssa, Q):
 
 
 def Wp(g, M, N):
-    c = [g**i - musquare(g, N) for i in range(M)]
+    c = g**np.arange(M) - musquare(g, N)
     w = toeplitz(c)
     w = np.matrix(w)
     return w
