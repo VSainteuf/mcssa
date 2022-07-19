@@ -2,3 +2,5 @@ numpy
 scipy
 pandas
 matplotlib
+tqdm
+numba
