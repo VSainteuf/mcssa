@@ -8,6 +8,9 @@ Created on Sat Feb 17 12:08:37 2018
 import sys
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
+from numba import jit
+from tqdm import tqdm
 
 import mcssa.utils as utils
 import mcssa.ar1_fitting as ar1
@@ -39,21 +42,22 @@ class SSA:
 
         self.data = np.array(data)
         try:
-            self.index = list(data.index)
+            self.index = data.index
+            self.name=  data.name
         except:
-            self.index = [i for i in range(self.data.shape[0])]
+            self.index = np.arange(self.data.shape[0])
         self.M = None
         self.N2 = None
         self.X = None
         self.covmat = None
         self.E = None
         self.values = None
-        self.RC = None
         self.algo = None
         self.freqs = None
         self.freq_rank = None
         self.ismc = False
 
+        
     def _embed(self, M):
         self.M = M
         N = self.data.shape[0]
@@ -73,6 +77,7 @@ class SSA:
         else:
             raise ValueError('Incorrect algorithm name')
         self.algo = algo
+        
 
     def run_ssa(self, M, algo='BK'):
         """Completes the Analysis on a SSA object
@@ -88,7 +93,7 @@ class SSA:
         self.values, self.E = utils.eigen_decomp(self.covmat)
         self.freqs = utils.dominant_freqs(self.E)
         self.freq_rank = self.freqs.argsort()
-        self.RC = utils.RC_table(self)
+
 
     def plot(self, freq_rank=True):
         """Plots the SSA spectrum of the series, assumes run_ssa has been completed
@@ -110,6 +115,7 @@ class SSA:
         """
         return utils.freq_table(self)
 
+
     def reconstruct(self, components):
         """Computes the RC corresponding to a list of components
         Args:
@@ -120,12 +126,12 @@ class SSA:
 
         """
         if len(components) == 2:
-            name = 'RC {}-{}'.format(components[0] + 1, components[1] + 1)
+            name = 'RC {}-{}'.format(components[0], components[1])
         else:
             name = 'Reconstruction'
-
-        components = [i - 1 for i in components]
-        res = self.RC.iloc[:, components].sum(axis=1)
+        RC = utils.RC_table(self, components=components)
+        cols = [f'RC#{comp}' for comp in components]
+        res = RC[cols].sum(axis=1)
         res.name = name
         res.index = self.index
         return res
@@ -161,9 +167,14 @@ class MCSSA(SSA):
         self.stats = None
         self.scores = None
         self.ismc = True
+        
 
-    def run_mcssa(self, M,
-                  algo='BK', n_suro=100, filtered_components=[], level=5):
+    def run_mcssa(self,
+                  M,
+                  algo='BK',
+                  n_suro=100,
+                  filtered_components=[],
+                  level=5):
         """Completes the MC-SSA algorithm on a MCSSA object instance
 
         Args:
@@ -176,28 +187,23 @@ class MCSSA(SSA):
         """
         # Store parameters,
         # EOFs are labelled from 0 to M-1 in the computations (not 1 to M)
-        self.filtered_components = [i - 1 for i in filtered_components]
+        self.filtered_components = filtered_components
         self.n_suro = n_suro
-
+        
         # Compute SSA and determine AR1 parameters
         print('Computing parameters')
         self.run_ssa(M, algo=algo)
         self.ar.set_parameters(self)
 
         # Generate surrogate and store diagonal elements of the projection
-        samples = np.zeros((n_suro, M))
         print('Generating surrogate ensemble')
-        for i in range(n_suro):
-            suro = self.ar.generate()
-            samples[i, :] = utils.projection(suro, self.E, algo=self.algo)
-
-            sys.stdout.write('\r Suroggate # {}/{}'.format(i + 1, n_suro))
-            sys.stdout.flush()
-
+        samples = Parallel(n_jobs=-2)(delayed(utils.projection)(suro, self.E, algo=self.algo) for suro in tqdm(self.ar.generate(n_suro), total=n_suro))
+        samples = np.vstack(samples)
+              
         # Compute statistics of the surrogates projections and store them
         self.stats = utils.stats(samples, level)
         self.scores = utils.significance(samples, self.values)
-        print('\n MCSSA completed!')
+        print('\nMCSSA completed!')
 
     def plot(self, freq_rank=True):
         """Plots the MCSSA spectrum, assumes run_mcssa has been completed
@@ -226,6 +232,7 @@ class AR():
         self.c0 = None  # lag-0 covariance
         self.N = None  # desired length for the realisations
 
+        
     def set_parameters(self, mcssa):
         """
         Determines the AR parameters that will constitute
@@ -237,17 +244,22 @@ class AR():
         self.gamma, self.alpha, self.c0 = ar1.ar1comp(mcssa)
         self.N = mcssa.data.shape[0]
 
-    def generate(self):
+        
+    def generate(self, n_samples):
         """
         Returns: a realisation of the AR process,
         assumes that parameters are set
         """
-        suro = np.zeros(self.N)
-        for i in range(1, self.N):
-            suro[i] = self.gamma * suro[i - 1] + \
-                self.alpha * np.random.normal()
+        suro = self.alpha * np.random.randn(n_samples, self.N)
+        suro[:,0] = suro[:,0] / (1-self.gamma**2) # For stationarity
+        calc(suro, self.gamma)
         return suro
 
+@jit(nopython=True)
+def calc(suro, gamma):
+    for i in range(1, suro.shape[1]):
+        suro[:, i] += gamma * suro[:, i - 1] 
+            
 
 if __name__ == '__main__':
     # generate a test series with random noise and oscillatory signal:
