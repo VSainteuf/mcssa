@@ -64,7 +64,7 @@ def proj_mat(Ed, filtered_components):
     """
     M = Ed.shape[0]
     if len(filtered_components) == 0:
-        return 1
+        return np.matrix(np.eye(M))
     d = np.ones(M)
     d[filtered_components] = 0
     K = np.diag(d)
