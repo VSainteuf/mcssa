@@ -54,7 +54,7 @@ with ```ssa.show_f()```. The reconstruction of the time series
 corresponding to these EOFs can be obtained with:
 
 ```python3
-RC=ssa.reconstruct([1,2])
+RC=ssa.reconstruct([0,1])
 RC.plot()
 ```
 
@@ -82,7 +82,7 @@ Once the presence of signal in these two EOFs has been proven, they can be set a
 in a second test to check for other potential significant EOFs:
 
 ```Python3
-mcssa.run_mcssa(20, n_suro=5000,filtered_components=[1,2])
+mcssa.run_mcssa(20, n_suro=5000,filtered_components=[0,1])
 mcssa.plot()
 ```
 

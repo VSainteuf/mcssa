@@ -119,7 +119,8 @@ class SSA:
     def reconstruct(self, components):
         """Computes the RC corresponding to a list of components
         Args:
-            components (list): list of components
+            components (list): list of components to reconstruct. 
+            Following the python way, the numbering of the EOFs starts from 0. 
 
         Returns:
             pandas.Series
@@ -153,7 +154,8 @@ class MCSSA(SSA):
 
     Attributes:
         ar (mcssa.AR): AR instance attached to the MCSSA test
-        filtered_components (list): list of filtered components
+        filtered_components (list): list of filtered components.
+        Following the python way, the numbering of the components starts from 0. 
         stats (pandas.DataFrame): Descriptive statistics of the surrogate ensemble
         scores (list): Significance scores of the EOFs
 
@@ -181,12 +183,12 @@ class MCSSA(SSA):
             M (int) window lenght
             algo (str) covariance matrix algo ('BK' or 'VG')
             n_suro (int): number of surrogate realisations
-            filtered_components (list): list of the filtered EOFs
+            filtered_components (list): list of the filtered EOFs.
+            Following the python way, the numbering of the EOFs starts from 0. 
             level (float): significance level in percent
 
         """
         # Store parameters,
-        # EOFs are labelled from 0 to M-1 in the computations (not 1 to M)
         self.filtered_components = filtered_components
         self.n_suro = n_suro
         
@@ -272,7 +274,7 @@ if __name__ == '__main__':
     ssa.plot()
 
     # Reconstruction
-    RC23 = ssa.reconstruct([1, 2])
+    RC23 = ssa.reconstruct([0, 1])
     RC23.plot()
 
     # MCSSA analysis
