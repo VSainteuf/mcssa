@@ -251,7 +251,7 @@ class AR():
         assumes that parameters are set
         """
         suro = self.alpha * np.random.randn(n_samples, self.N)
-        suro[:,0] = suro[:,0] / (1-self.gamma**2) # For stationarity
+        suro[:,0] = suro[:,0] / np.sqrt(1-self.gamma**2) # For stationarity
         calc(suro, self.gamma)
         return suro
 
